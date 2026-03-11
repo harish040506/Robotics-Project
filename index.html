@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Visual Grasp Quality Estimation — Team 11 · 22AIE214</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white: #ffffff;
+  --off: #f7f7fa;
+  --off2: #f0f0f6;
+  --border: #e2e2ee;
+  --border2: #d0d0e4;
+  --text: #1a1a2e;
+  --muted: #72728a;
+  --muted2: #a0a0b8;
+  --accent: #5b21b6;
+  --accent-lt: #ede9fe;
+  --blue: #0369a1;
+  --blue-lt: #e0f2fe;
+  --green: #15803d;
+  --green-lt: #dcfce7;
+  --amber: #b45309;
+  --amber-lt: #fef3c7;
+  --red: #b91c1c;
+  --red-lt: #fee2e2;
+  --sim: #0e7490;
+  --sim-lt: #ecfeff;
+  --hw: #7c2d12;
+  --hw-lt: #fff7ed;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--white);color:var(--text);font-family:'Inter',sans-serif;font-weight:400;overflow-x:hidden;cursor:none;}
+
+/* CURSOR */
+#cur{width:10px;height:10px;background:var(--accent);border-radius:50%;position:fixed;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .2s,height .2s;}
+#cur-r{width:34px;height:34px;border:1.5px solid rgba(91,33,182,.35);border-radius:50%;position:fixed;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:all .08s linear;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;height:58px;padding:0 3rem;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.12em;color:var(--text);text-decoration:none;}
+.nav-logo em{color:var(--accent);font-style:normal;}
+.nav-links{display:flex;gap:1.6rem;list-style:none;}
+.nav-links a{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);text-decoration:none;text-transform:uppercase;letter-spacing:.12em;transition:color .2s;}
+.nav-links a:hover,.nav-links a.active{color:var(--accent);}
+.nav-tag{font-family:'Space Mono',monospace;font-size:.56rem;padding:3px 10px;border:1px solid var(--accent);color:var(--accent);letter-spacing:.1em;text-transform:uppercase;}
+
+/* HERO */
+#hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:8rem 3rem 5rem;position:relative;overflow:hidden;background:linear-gradient(145deg,#f8f7ff 0%,#ffffff 50%,#f0fdf4 100%);}
+.h-dots{position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(circle,rgba(91,33,182,.08) 1px,transparent 1px);background-size:36px 36px;}
+.h-blob{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;}
+.h-blob1{width:420px;height:420px;background:rgba(91,33,182,.1);top:-80px;right:-60px;animation:bp 6s ease-in-out infinite;}
+.h-blob2{width:300px;height:300px;background:rgba(14,116,144,.08);bottom:60px;left:10%;animation:bp 8s ease-in-out 1.5s infinite reverse;}
+@keyframes bp{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+
+.h-eyebrow{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--accent);letter-spacing:.3em;text-transform:uppercase;display:flex;align-items:center;gap:.8rem;margin-bottom:1.5rem;opacity:0;animation:fu .7s .2s forwards;}
+.h-eyebrow::before{content:'';width:32px;height:2px;background:var(--accent);flex-shrink:0;}
+.h-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.8rem,9vw,8.5rem);line-height:.93;letter-spacing:.01em;opacity:0;animation:fu .8s .35s forwards;position:relative;z-index:1;}
+.h-title .blk{color:var(--text);}
+.h-title .vlt{color:var(--accent);}
+.h-title .tl{color:var(--sim);}
+.h-sub{max-width:560px;line-height:1.75;color:var(--muted);font-size:.95rem;margin-top:1.8rem;opacity:0;animation:fu .7s .55s forwards;z-index:1;position:relative;}
+
+.h-status{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1.8rem;opacity:0;animation:fu .7s .7s forwards;z-index:1;position:relative;}
+.sp{font-family:'Space Mono',monospace;font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;padding:5px 12px;border-radius:2px;font-weight:700;}
+.sp-hw{background:var(--hw-lt);color:var(--hw);border:1px solid rgba(124,45,18,.2);}
+.sp-sim{background:var(--sim-lt);color:var(--sim);border:1px solid rgba(14,116,144,.2);}
+.sp-wip{background:#fef9c3;color:#854d0e;border:1px solid rgba(133,77,14,.2);}
+
+.h-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:1.2rem;opacity:0;animation:fu .7s .82s forwards;z-index:1;position:relative;}
+.tag{font-family:'Space Mono',monospace;font-size:.56rem;text-transform:uppercase;letter-spacing:.08em;padding:4px 10px;border:1px solid var(--border2);color:var(--muted);transition:all .2s;border-radius:2px;}
+.tag:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-lt);}
+.h-cta{display:flex;gap:.8rem;margin-top:2.5rem;opacity:0;animation:fu .7s .95s forwards;z-index:1;position:relative;}
+.btn-primary{font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--white);background:var(--accent);padding:12px 26px;display:inline-block;transition:all .25s;border-radius:2px;}
+.btn-primary:hover{background:#4c1d95;transform:translateY(-2px);box-shadow:0 8px 24px rgba(91,33,182,.25);}
+.btn-outline{font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--sim);border:1.5px solid var(--sim);padding:12px 26px;display:inline-block;transition:all .25s;border-radius:2px;}
+.btn-outline:hover{background:var(--sim-lt);transform:translateY(-2px);}
+.h-stats{position:absolute;bottom:4rem;right:3rem;display:flex;gap:2.5rem;opacity:0;animation:fu .7s 1.1s forwards;z-index:1;}
+.st{text-align:right;}
+.st-num{font-family:'Bebas Neue',sans-serif;font-size:2.8rem;line-height:1;color:var(--text);}
+.st-lbl{font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted2);letter-spacing:.15em;text-transform:uppercase;margin-top:2px;}
+@keyframes fu{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+/* TICKER */
+.ticker{background:var(--accent);padding:10px 0;overflow:hidden;}
+.ticker-in{display:flex;gap:3rem;animation:tick 24s linear infinite;white-space:nowrap;}
+.ti{font-family:'Bebas Neue',sans-serif;font-size:.8rem;letter-spacing:.2em;color:rgba(255,255,255,.9);flex-shrink:0;}
+.td{color:rgba(255,255,255,.35);}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* SECTION COMMONS */
+section{padding:7rem 3rem;position:relative;}
+.alt{background:var(--off);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+.s-eyebrow{font-family:'Space Mono',monospace;font-size:.56rem;text-transform:uppercase;letter-spacing:.28em;display:flex;align-items:center;gap:.7rem;margin-bottom:1rem;}
+.s-eyebrow::after{content:'';flex:1;height:1px;background:var(--border2);max-width:60px;}
+.eye-hw{color:var(--hw);}
+.eye-sim{color:var(--sim);}
+.eye-gen{color:var(--accent);}
+.s-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,5vw,4rem);line-height:1;letter-spacing:.03em;color:var(--text);margin-bottom:1rem;}
+.s-lead{font-size:.93rem;color:var(--muted);line-height:1.75;max-width:640px;margin-bottom:3rem;}
+
+.section-badge{display:inline-flex;align-items:center;gap:.5rem;font-family:'Space Mono',monospace;font-size:.56rem;text-transform:uppercase;letter-spacing:.12em;padding:4px 12px;border-radius:2px;margin-bottom:2rem;font-weight:700;}
+.sb-hw{background:var(--hw-lt);color:var(--hw);border:1px solid rgba(124,45,18,.2);}
+.sb-sim{background:var(--sim-lt);color:var(--sim);border:1px solid rgba(14,116,144,.2);}
+.sb-dot{width:6px;height:6px;border-radius:50%;}
+.sb-hw .sb-dot{background:var(--hw);}
+.sb-sim .sb-dot{background:var(--sim);animation:lp 1.2s ease-in-out infinite;}
+@keyframes lp{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* DIVIDER BANNER */
+.divider-banner{padding:1.5rem 3rem;display:flex;align-items:center;gap:2rem;border-top:2px solid;border-bottom:2px solid;}
+.divider-banner.hw{background:var(--hw-lt);border-color:rgba(124,45,18,.25);}
+.divider-banner.sim{background:var(--sim-lt);border-color:rgba(14,116,144,.25);}
+.db-icon{font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;}
+.db-icon.hw{color:var(--hw);}
+.db-icon.sim{color:var(--sim);}
+.db-label{font-family:'Space Mono',monospace;font-size:.58rem;text-transform:uppercase;letter-spacing:.2em;margin-bottom:.25rem;}
+.db-label.hw{color:var(--hw);}
+.db-label.sim{color:var(--sim);}
+.db-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.06em;color:var(--text);}
+.db-desc{font-size:.82rem;color:var(--muted);margin-top:.2rem;}
+
+/* REVEAL */
+.rv{opacity:0;transform:translateY(30px);transition:opacity .65s,transform .65s cubic-bezier(.34,1.4,.64,1);}
+.rv.on{opacity:1;transform:none;}
+
+/* INTRO */
+.intro-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start;}
+.intro-p{font-size:.93rem;line-height:1.8;color:#4a4a6a;margin-bottom:1.3rem;}
+.intro-p strong{color:var(--text);font-weight:600;}
+.scope-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.8rem;margin-top:1rem;}
+.scope-card{border:1px solid var(--border);background:var(--white);padding:1.2rem 1.4rem;border-radius:4px;transition:all .2s;}
+.scope-card:hover{border-color:var(--accent);background:var(--accent-lt);}
+.sc-pill{font-family:'Space Mono',monospace;font-size:.52rem;text-transform:uppercase;letter-spacing:.12em;padding:2px 8px;border-radius:2px;display:inline-block;margin-bottom:.5rem;}
+.sc-pill.ml{background:var(--accent-lt);color:var(--accent);}
+.sc-pill.cv{background:var(--blue-lt);color:var(--blue);}
+.sc-pill.rb{background:var(--green-lt);color:var(--green);}
+.sc-pill.au{background:var(--amber-lt);color:var(--amber);}
+.sc-name{font-size:.85rem;font-weight:600;color:var(--text);margin-bottom:.2rem;}
+.sc-desc{font-size:.78rem;color:var(--muted);line-height:1.55;}
+
+/* PROBLEM */
+.prob-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);}
+.prob-card{background:var(--white);padding:2rem;transition:background .2s;}
+.prob-card:hover{background:var(--off);}
+.prob-card.sol{background:var(--accent-lt);}
+.pn{font-family:'Bebas Neue',sans-serif;font-size:3rem;color:rgba(91,33,182,.12);line-height:1;margin-bottom:.4rem;}
+.pn.s{color:rgba(91,33,182,.3);}
+.pt{font-family:'Space Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text);margin-bottom:.5rem;}
+.pt.s{color:var(--accent);}
+.pd{font-size:.82rem;color:var(--muted);line-height:1.7;}
+.pd.s{color:#3b0764;}
+
+/* OBJECTIVES */
+.obj-rows{border:1px solid var(--border);}
+.obj-row{display:flex;align-items:center;gap:1.8rem;padding:1.6rem 2rem;border-bottom:1px solid var(--border);transition:background .2s;position:relative;}
+.obj-row:last-child{border-bottom:none;}
+.obj-row:hover{background:var(--off);}
+.obj-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);transform:scaleY(0);transform-origin:bottom;transition:transform .3s;}
+.obj-row:hover::before{transform:scaleY(1);}
+.oi{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:rgba(91,33,182,.15);line-height:1;flex-shrink:0;width:46px;}
+.ob{flex:1;}
+.oh{font-weight:600;font-size:.9rem;color:var(--text);margin-bottom:.25rem;}
+.od{font-size:.82rem;color:var(--muted);line-height:1.6;}
+.obadge{font-family:'Space Mono',monospace;font-size:.5rem;text-transform:uppercase;letter-spacing:.1em;padding:3px 9px;border:1px solid;flex-shrink:0;border-radius:2px;}
+.bml{color:var(--accent);border-color:var(--accent);background:var(--accent-lt);}
+.bcv{color:var(--blue);border-color:var(--blue);background:var(--blue-lt);}
+.brb{color:var(--green);border-color:var(--green);background:var(--green-lt);}
+.bau{color:var(--amber);border-color:var(--amber);background:var(--amber-lt);}
+
+/* HW WORKFLOW */
+.hw-workflow{display:grid;grid-template-columns:1fr 1fr;gap:3.5rem;align-items:start;}
+.hw-steps{display:flex;flex-direction:column;}
+.hw-step{display:flex;gap:1.5rem;padding:1.8rem 0;border-bottom:1px solid var(--border);position:relative;}
+.hw-step:last-child{border-bottom:none;}
+.hw-dot{width:34px;height:34px;border-radius:50%;flex-shrink:0;background:var(--hw-lt);border:2px solid rgba(124,45,18,.3);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:.85rem;color:var(--hw);position:relative;z-index:1;}
+.hw-body{flex:1;}
+.hw-step-title{font-weight:600;font-size:.9rem;color:var(--text);margin-bottom:.3rem;}
+.hw-step-desc{font-size:.82rem;color:var(--muted);line-height:1.65;}
+.hw-pills{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.6rem;}
+.hpill{font-family:'Space Mono',monospace;font-size:.5rem;text-transform:uppercase;letter-spacing:.08em;padding:2px 7px;background:var(--hw-lt);color:var(--hw);border:1px solid rgba(124,45,18,.2);border-radius:2px;}
+
+/* Procedure card (no slide ref) */
+.proc-detail{border:1px solid rgba(124,45,18,.2);border-radius:4px;overflow:hidden;margin-bottom:1.2rem;}
+.proc-detail-hd{background:var(--hw-lt);padding:.9rem 1.3rem;border-bottom:1px solid rgba(124,45,18,.15);}
+.proc-detail-hd-title{font-weight:600;font-size:.85rem;color:var(--hw);}
+.proc-detail-body{padding:1rem 1.3rem;background:var(--white);}
+.proc-detail-body ul{font-size:.82rem;color:var(--muted);line-height:2.1;padding-left:1.1rem;}
+
+/* HW COMP GRID */
+.hw-comp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-top:3rem;}
+.hw-comp{background:var(--white);padding:1.8rem;transition:background .2s;}
+.hw-comp:hover{background:var(--hw-lt);}
+.hcn{font-family:'Bebas Neue',sans-serif;font-size:3rem;color:rgba(124,45,18,.1);line-height:1;margin-bottom:.4rem;}
+.hcname{font-weight:600;font-size:.88rem;color:var(--text);margin-bottom:.4rem;}
+.hcspec{font-size:.8rem;color:var(--muted);line-height:1.6;}
+.hc-badge{display:inline-block;font-family:'Space Mono',monospace;font-size:.5rem;text-transform:uppercase;letter-spacing:.1em;padding:2px 8px;margin-top:.6rem;background:var(--hw-lt);color:var(--hw);border:1px solid rgba(124,45,18,.2);border-radius:2px;}
+
+/* SW GRID */
+.sw-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:2.5rem;}
+.sw-card{border:1px solid var(--border);padding:1.6rem;background:var(--white);transition:all .2s;border-radius:4px;}
+.sw-card:hover{border-color:var(--accent);box-shadow:0 4px 16px rgba(91,33,182,.08);}
+.sw-icon{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--accent);margin-bottom:.4rem;line-height:1;}
+.sw-name{font-weight:600;font-size:.85rem;color:var(--text);margin-bottom:.3rem;}
+.sw-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+
+/* TERMINAL */
+.terminal{background:#0c1220;border:1px solid #1e2d40;border-radius:6px;font-family:'Space Mono',monospace;font-size:.69rem;line-height:1.85;overflow:hidden;box-shadow:0 8px 32px rgba(14,116,144,.15);}
+.term-header{display:flex;align-items:center;gap:.45rem;padding:.6rem 1.1rem;background:#151f2e;border-bottom:1px solid #1e2d40;}
+.tdr{width:11px;height:11px;border-radius:50%;background:#ef4444;}
+.tdy{width:11px;height:11px;border-radius:50%;background:#f59e0b;}
+.tdg{width:11px;height:11px;border-radius:50%;background:#22c55e;}
+.term-title{font-size:.55rem;color:#4a6080;letter-spacing:.1em;text-transform:uppercase;margin-left:auto;}
+.term-body{padding:1.3rem 1.4rem;max-height:500px;overflow-y:auto;}
+.tc{color:#4a6080;}.tk{color:#c084fc;}.ts{color:#fbbf24;}.tn{color:#38bdf8;}.tf{color:#a78bfa;}.to{color:#34d399;}.th{color:#38bdf8;font-weight:700;}
+
+/* SIM CARDS */
+.sim-layout{display:grid;grid-template-columns:1.15fr 1fr;gap:3.5rem;align-items:start;}
+.sim-right{display:flex;flex-direction:column;gap:1.2rem;}
+.sim-card{border:1px solid var(--border);padding:1.8rem;background:var(--white);border-radius:4px;position:relative;overflow:hidden;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.sim-card:hover{border-color:var(--sim);box-shadow:0 4px 20px rgba(14,116,144,.1);}
+.sbar{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px;}
+.sbar-p{background:var(--accent);}.sbar-c{background:var(--sim);}.sbar-a{background:var(--amber);}.sbar-g{background:var(--green);}
+.sc-label{font-family:'Space Mono',monospace;font-size:.54rem;text-transform:uppercase;letter-spacing:.18em;color:var(--muted2);margin-bottom:.4rem;}
+.sc-val{font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--text);line-height:1;}
+.sc-val small{font-size:1.5rem;}
+.sc-sub{font-size:.78rem;color:var(--muted);margin-top:.2rem;}
+.sim-verified{display:inline-flex;align-items:center;gap:.5rem;margin-top:.5rem;font-family:'Space Mono',monospace;font-size:.56rem;text-transform:uppercase;letter-spacing:.1em;padding:5px 12px;background:var(--green-lt);color:var(--green);border:1px solid rgba(21,128,61,.25);border-radius:2px;}
+.vdot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:lp 1.2s ease-in-out infinite;}
+
+/* STATE MACHINE */
+.sm-wrap{overflow-x:auto;padding-bottom:.5rem;}
+.sm-flow{display:flex;align-items:stretch;min-width:680px;margin-top:2rem;}
+.sm-node{flex:1;border:1.5px solid var(--border);background:var(--white);padding:1.6rem 1rem;text-align:center;position:relative;transition:all .28s;}
+.sm-node:not(:last-child){border-right:none;}
+.sm-node:not(:last-child)::after{content:'→';position:absolute;right:-14px;top:50%;transform:translateY(-50%);font-family:'Space Mono',monospace;font-size:.9rem;color:var(--sim);z-index:2;background:var(--white);padding:0 3px;}
+.sm-node:hover{border-color:var(--sim);transform:translateY(-4px);z-index:10;box-shadow:0 6px 20px rgba(14,116,144,.12);background:var(--sim-lt);}
+.sm-node.active{border-color:var(--sim);background:var(--sim-lt);}
+.sni{font-family:'Bebas Neue',sans-serif;font-size:.6rem;color:var(--muted2);letter-spacing:.2em;margin-bottom:.3rem;}
+.snic{font-size:1.5rem;margin-bottom:.3rem;}
+.snn{font-family:'Space Mono',monospace;font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text);line-height:1.4;}
+
+/* PICK VERIFICATION */
+.pv-grid{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start;}
+.pv-steps{border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+.pv-step{padding:1.6rem 2rem;border-bottom:1px solid var(--border);display:flex;gap:1.3rem;transition:background .2s;}
+.pv-step:last-child{border-bottom:none;}
+.pv-step:hover{background:var(--sim-lt);}
+.pvn{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:rgba(14,116,144,.2);line-height:1;flex-shrink:0;width:36px;}
+.pvt{font-weight:600;font-size:.85rem;color:var(--text);margin-bottom:.25rem;}
+.pvd{font-size:.8rem;color:var(--muted);line-height:1.6;}
+.pvd code{font-family:'Space Mono',monospace;font-size:.7rem;background:var(--sim-lt);color:var(--sim);padding:1px 5px;border-radius:2px;}
+.pv-code-box{border:1px solid var(--border);border-radius:6px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.06);}
+.pv-code-hd{padding:.55rem 1rem;background:var(--off);border-bottom:1px solid var(--border);font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.1em;}
+.pv-code{background:#0c1220;font-family:'Space Mono',monospace;font-size:.7rem;line-height:1.85;padding:1.4rem;}
+
+/* COLOR SORTING */
+.cs-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;}
+.cs-card{border-radius:4px;padding:2rem;border:1.5px solid;transition:all .25s;}
+.cs-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.1);}
+.cs-card.red{border-color:rgba(185,28,28,.3);background:#fff5f5;}
+.cs-card.green{border-color:rgba(21,128,61,.3);background:#f0fdf4;}
+.cs-card.blue{border-color:rgba(3,105,161,.3);background:#f0f9ff;}
+.cs-dot{width:32px;height:32px;border-radius:50%;margin-bottom:.9rem;}
+.cs-card.red .cs-dot{background:#ef4444;}
+.cs-card.green .cs-dot{background:#22c55e;}
+.cs-card.blue .cs-dot{background:#3b82f6;}
+.cs-name{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.05em;color:var(--text);margin-bottom:.25rem;}
+.cs-coord{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);margin-bottom:.6rem;}
+.cs-desc{font-size:.8rem;color:var(--muted);line-height:1.6;}
+.skip-box{margin-top:1.5rem;border:1px solid var(--border);border-radius:4px;padding:1.2rem 1.6rem;background:var(--off);font-family:'Space Mono',monospace;font-size:.68rem;line-height:2;}
+.skip-label{font-size:.52rem;text-transform:uppercase;letter-spacing:.15em;color:var(--muted2);margin-bottom:.4rem;}
+
+/* METRICS */
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);}
+.met-card{background:var(--white);padding:2.5rem 2rem;transition:background .2s;}
+.met-card:hover{background:var(--off);}
+.met-val{font-family:'Bebas Neue',sans-serif;font-size:4.5rem;line-height:1;}
+.met-val.p{color:var(--accent);}
+.met-val.c{color:var(--sim);}
+.met-val.a{color:var(--amber);}
+.met-val.g{color:var(--green);}
+.met-lbl{font-family:'Space Mono',monospace;font-size:.56rem;text-transform:uppercase;letter-spacing:.15em;color:var(--muted2);margin-top:.5rem;}
+.met-desc{font-size:.8rem;color:var(--muted);margin-top:.5rem;line-height:1.55;}
+
+/* VIDEO SECTION */
+#video{background:var(--off);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+.video-layout{display:grid;grid-template-columns:1fr 1.6fr;gap:3rem;align-items:start;}
+.video-frame{border:2px dashed var(--border2);border-radius:6px;background:var(--white);aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:pointer;transition:border-color .2s;}
+.video-frame:hover{border-color:var(--sim);}
+.video-frame.has-video{border-style:solid;border-color:var(--border);}
+.video-frame video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:4px;}
+.video-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:4px;}
+.vf-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;text-align:center;padding:2rem;}
+.vf-icon{width:56px;height:56px;border-radius:50%;background:var(--sim-lt);border:2px solid rgba(14,116,144,.3);display:flex;align-items:center;justify-content:center;}
+.vf-icon svg{width:22px;height:22px;fill:var(--sim);margin-left:3px;}
+.vf-title{font-weight:600;font-size:.9rem;color:var(--text);}
+.vf-sub{font-size:.8rem;color:var(--muted);line-height:1.6;max-width:220px;}
+.vf-badge{font-family:'Space Mono',monospace;font-size:.52rem;text-transform:uppercase;letter-spacing:.1em;padding:4px 10px;background:var(--sim-lt);color:var(--sim);border:1px solid rgba(14,116,144,.2);border-radius:2px;}
+
+/* HOW TO EMBED box */
+.embed-instructions{margin-top:1rem;border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+.ei-hd{padding:.6rem 1rem;background:var(--off2);border-bottom:1px solid var(--border);font-family:'Space Mono',monospace;font-size:.54rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);}
+.ei-body{padding:1rem;font-size:.78rem;color:var(--muted);line-height:1.75;}
+.ei-body code{font-family:'Space Mono',monospace;font-size:.68rem;background:var(--off2);color:var(--accent);padding:2px 6px;border-radius:2px;}
+
+.video-info{display:flex;flex-direction:column;gap:1.5rem;}
+.vi-card{border:1px solid var(--border);border-radius:4px;padding:1.5rem;background:var(--white);}
+.vi-label{font-family:'Space Mono',monospace;font-size:.54rem;text-transform:uppercase;letter-spacing:.15em;color:var(--muted2);margin-bottom:.4rem;}
+.vi-title{font-weight:600;font-size:.9rem;color:var(--text);margin-bottom:.4rem;}
+.vi-desc{font-size:.82rem;color:var(--muted);line-height:1.65;}
+.vi-status{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem;}
+.vi-tag{font-family:'Space Mono',monospace;font-size:.52rem;text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:2px;}
+.vt-done{background:var(--green-lt);color:var(--green);border:1px solid rgba(21,128,61,.2);}
+.vt-partial{background:var(--amber-lt);color:var(--amber);border:1px solid rgba(180,83,9,.2);}
+.vt-pending{background:var(--off2);color:var(--muted);border:1px solid var(--border);}
+
+/* TIMELINE */
+.tl-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-top:2.5rem;}
+.tl-card{background:var(--white);padding:2rem;position:relative;overflow:hidden;transition:background .2s;}
+.tl-card:hover{background:var(--off);}
+.tl-w{font-family:'Bebas Neue',sans-serif;font-size:3.5rem;color:rgba(91,33,182,.08);line-height:1;margin-bottom:.4rem;}
+.tl-t{font-weight:600;font-size:.84rem;color:var(--text);margin-bottom:.5rem;}
+.tl-d{font-size:.79rem;color:var(--muted);line-height:1.65;}
+.tl-bar{position:absolute;top:0;left:0;right:0;height:3px;}
+
+/* TEAM */
+#team{text-align:center;}
+.team-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:3rem 0 2rem;}
+.tc-card{background:var(--white);padding:2.5rem 2rem;transition:background .2s;position:relative;overflow:hidden;}
+.tc-card:hover{background:var(--off);}
+.tc-card::before{content:attr(data-n);font-family:'Bebas Neue',sans-serif;font-size:6rem;position:absolute;bottom:-.5rem;right:-.5rem;color:rgba(91,33,182,.05);line-height:1;pointer-events:none;}
+.tc-av{width:56px;height:56px;border-radius:50%;background:var(--accent-lt);border:2px solid var(--accent);margin:0 auto 1.1rem;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--accent);position:relative;z-index:1;}
+.tc-name{font-weight:600;font-size:.85rem;color:var(--text);margin-bottom:.3rem;position:relative;z-index:1;}
+.tc-id{font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted2);letter-spacing:.05em;position:relative;z-index:1;}
+.course-box{display:inline-block;border:1px solid var(--border2);padding:1.1rem 2.5rem;margin-top:2rem;border-radius:4px;background:var(--off);}
+.course-txt{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.course-txt span{color:var(--accent);}
+
+footer{border-top:1px solid var(--border);padding:2.2rem 3rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:var(--off);}
+.f-logo{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.12em;color:var(--muted);}
+.f-logo em{color:var(--accent);font-style:normal;}
+.f-copy{font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted2);}
+.f-links{display:flex;gap:1.5rem;list-style:none;}
+.f-links a{font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted2);text-decoration:none;text-transform:uppercase;letter-spacing:.1em;transition:color .2s;}
+.f-links a:hover{color:var(--accent);}
+
+@media(max-width:960px){
+  .intro-grid,.hw-workflow,.sim-layout,.pv-grid,.video-layout{grid-template-columns:1fr;}
+  .prob-grid,.hw-comp-grid,.cs-cols,.metrics-grid,.tl-grid,.team-grid{grid-template-columns:repeat(2,1fr);}
+  .scope-grid,.sw-grid{grid-template-columns:repeat(2,1fr);}
+  nav{padding:0 1.5rem;}.nav-links{display:none;}
+  section{padding:5rem 1.5rem;}
+  .h-stats{position:static;margin-top:2rem;}
+  .divider-banner{padding:1.2rem 1.5rem;flex-wrap:wrap;}
+}
+@media(max-width:600px){
+  .prob-grid,.hw-comp-grid,.cs-cols,.metrics-grid,.tl-grid,.team-grid,.scope-grid,.sw-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div id="cur"></div>
+<div id="cur-r"></div>
+
+<!-- NAV -->
+<nav id="top-nav">
+  <a href="#hero" class="nav-logo">4DOF<em>.</em>ARM</a>
+  <ul class="nav-links">
+    <li><a href="#intro">Intro</a></li>
+    <li><a href="#hardware">Hardware</a></li>
+    <li><a href="#simulation">Simulation</a></li>
+    <li><a href="#verification">Verification</a></li>
+    <li><a href="#video">Demo</a></li>
+    <li><a href="#team">Team</a></li>
+  </ul>
+  <div class="nav-tag">Team 11 · 22AIE214</div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="h-dots"></div>
+  <div class="h-blob h-blob1"></div>
+  <div class="h-blob h-blob2"></div>
+  <div class="h-eyebrow">Amrita School of AI &nbsp;—&nbsp; Team 11 &nbsp;—&nbsp; Course 22AIE214</div>
+  <h1 class="h-title">
+    <span class="blk">DEEP LEARNING</span><br>
+    <span class="vlt">VISUAL GRASP</span><br>
+    <span class="blk">QUALITY</span><br>
+    <span class="tl">ESTIMATION</span>
+  </h1>
+  <p class="h-sub">A 4-DOF robotic arm project using deep learning for grasp quality estimation, post-lift pick verification, and color-based object sorting. Hardware was designed and partially built — the complete pipeline was implemented and validated in PyBullet simulation.</p>
+  <div class="h-status">
+    <span class="sp sp-hw">🔧 Hardware — Designed &amp; Partially Built</span>
+    <span class="sp sp-sim">✅ Simulation — Fully Implemented</span>
+    <span class="sp sp-wip">⚠️ Hardware Not Fully Working</span>
+  </div>
+  <div class="h-tags">
+    <span class="tag">4-DOF Robotic Arm</span>
+    <span class="tag">Grasp Quality Estimation</span>
+    <span class="tag">Pick Verification</span>
+    <span class="tag">Color Sorting</span>
+    <span class="tag">PyBullet · Franka Panda</span>
+    <span class="tag">OpenCV</span>
+    <span class="tag">TensorFlow / PyTorch</span>
+    <span class="tag">Arduino</span>
+    <span class="tag">RGB Camera</span>
+    <span class="tag">IK Trajectory</span>
+  </div>
+  <div class="h-cta">
+    <a href="#hardware" class="btn-primary">Hardware Design</a>
+    <a href="#simulation" class="btn-outline">Simulation Results</a>
+  </div>
+  <div class="h-stats">
+    <div class="st"><div class="st-num">4</div><div class="st-lbl">DOF Arm</div></div>
+    <div class="st"><div class="st-num">3</div><div class="st-lbl">Color Bins</div></div>
+    <div class="st"><div class="st-num">30</div><div class="st-lbl">Sim Cubes</div></div>
+    <div class="st"><div class="st-num">100<span style="font-size:1.4rem">%</span></div><div class="st-lbl">Sort Accuracy</div></div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker"><div class="ticker-in">
+  <span class="ti">GRASP QUALITY ESTIMATION</span><span class="td"> ◆ </span>
+  <span class="ti">PICK VERIFICATION</span><span class="td"> ◆ </span>
+  <span class="ti">COLOR-BASED SORTING</span><span class="td"> ◆ </span>
+  <span class="ti">4-DOF ROBOTIC ARM</span><span class="td"> ◆ </span>
+  <span class="ti">PYBULLET SIMULATION</span><span class="td"> ◆ </span>
+  <span class="ti">DEEP LEARNING PERCEPTION</span><span class="td"> ◆ </span>
+  <span class="ti">INVERSE KINEMATICS</span><span class="td"> ◆ </span>
+  <span class="ti">CONTACT POINT GRASPING</span><span class="td"> ◆ </span>
+  <span class="ti">GRASP QUALITY ESTIMATION</span><span class="td"> ◆ </span>
+  <span class="ti">PICK VERIFICATION</span><span class="td"> ◆ </span>
+  <span class="ti">COLOR-BASED SORTING</span><span class="td"> ◆ </span>
+  <span class="ti">4-DOF ROBOTIC ARM</span><span class="td"> ◆ </span>
+  <span class="ti">PYBULLET SIMULATION</span><span class="td"> ◆ </span>
+  <span class="ti">DEEP LEARNING PERCEPTION</span><span class="td"> ◆ </span>
+  <span class="ti">INVERSE KINEMATICS</span><span class="td"> ◆ </span>
+  <span class="ti">CONTACT POINT GRASPING</span><span class="td"> ◆ </span>
+</div></div>
+
+<!-- INTRO -->
+<section id="intro">
+  <div class="s-eyebrow eye-gen">Project Introduction</div>
+  <div class="s-title">WHAT WE BUILT</div>
+  <div class="intro-grid">
+    <div class="rv">
+      <p class="intro-p">Robotic grasping is a <strong>fundamental task in manipulation and automation</strong>. Conventional systems rely on manually tuned heuristics — they break under object variability and have no mechanism to detect grasp failures before the task is already ruined.</p>
+      <p class="intro-p">This project designed a <strong>vision-driven deep learning pipeline</strong> for a 4-DOF robotic arm. The core idea: score candidate grasps using a trained model before executing, then verify the pick after lifting. Only confirmed picks proceed to color-based sorting into designated bins.</p>
+      <p class="intro-p"><strong>The hardware pipeline was designed, components were acquired, and partial integration was carried out</strong> — the arm, servos, gripper, camera, and Arduino were all assembled. Full end-to-end hardware operation was not achieved due to integration challenges.</p>
+      <p class="intro-p">To validate the complete pipeline logic, <strong>the entire system was implemented in PyBullet simulation</strong> using the Franka Panda robot — IK trajectory control, pick verification via contact points, and color sorting all run correctly in simulation.</p>
+    </div>
+    <div class="rv">
+      <div class="scope-grid">
+        <div class="scope-card"><div class="sc-pill ml">Machine Learning</div><div class="sc-name">Deep Learning Grasp Prediction</div><div class="sc-desc">A trained model was designed to predict grasp quality scores for candidate regions and select the best pose before execution.</div></div>
+        <div class="scope-card"><div class="sc-pill cv">Computer Vision</div><div class="sc-name">Image Acquisition + Color Detection</div><div class="sc-desc">OpenCV handled capture, preprocessing, and dominant color extraction for pick verification and sorting decisions.</div></div>
+        <div class="scope-card"><div class="sc-pill rb">Robotics</div><div class="sc-name">4-DOF Motion + Kinematics</div><div class="sc-desc">Servo-actuated joints on hardware; IK-based trajectory control in simulation at 240 Hz physics rate.</div></div>
+        <div class="scope-card"><div class="sc-pill au">Automation</div><div class="sc-name">Pick-and-Place + Sorting</div><div class="sc-desc">Fully automated pick, verify, classify, and place loop — driven by visual feedback at every stage.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section id="problem" class="alt">
+  <div class="s-eyebrow eye-gen">Problem Statement</div>
+  <div class="s-title">WHY THIS MATTERS</div>
+  <div class="prob-grid rv">
+    <div class="prob-card"><div class="pn">01</div><div class="pt">Heuristic Fragility</div><div class="pd">Conventional grasping methods relied on heuristics or manual tuning — these failed under object variability in position, orientation, or lighting.</div></div>
+    <div class="prob-card"><div class="pn">02</div><div class="pt">Late Failure Detection</div><div class="pd">Grasp failures were detected only after task failure — the arm proceeded to the drop zone even with nothing in its gripper, wasting entire cycles.</div></div>
+    <div class="prob-card"><div class="pn">03</div><div class="pt">No Post-Grasp Check</div><div class="pd">Without visual pick verification after lifting, there was no way to confirm the object was actually grasped. System reliability was fundamentally limited.</div></div>
+    <div class="prob-card"><div class="pn">04</div><div class="pt">No Pre-Execution Scoring</div><div class="pd">Without a learned quality estimator, all candidate grasps looked identical. The arm executed the first feasible pose regardless of its actual quality.</div></div>
+    <div class="prob-card"><div class="pn">05</div><div class="pt">Fixed Sorting Rules</div><div class="pd">Rule-based sorting broke under variability. A vision-based approach reading color from each verified pick was far more robust.</div></div>
+    <div class="prob-card sol"><div class="pn s">→</div><div class="pt s">Our Approach</div><div class="pd s">Score grasps before execution using deep learning. Verify picks after lifting via contact points. Sort by color. Validate fully in simulation.</div></div>
+  </div>
+</section>
+
+<!-- OBJECTIVES -->
+<section id="objectives">
+  <div class="s-eyebrow eye-gen">Objectives</div>
+  <div class="s-title">FIVE CORE GOALS</div>
+  <div class="obj-rows rv">
+    <div class="obj-row"><div class="oi">01</div><div class="ob"><div class="oh">Estimate Grasp Quality Using Visual Information</div><div class="od">A trained deep learning model was designed to score each candidate grasp region from the RGB image and output a quality confidence per region.</div></div><div class="obadge bml">ML</div></div>
+    <div class="obj-row"><div class="oi">02</div><div class="ob"><div class="oh">Select Suitable Grasps Before Execution</div><div class="od">The highest-quality scoring candidate was selected as the target grasp pose — replacing blind first-feasible selection with a learned quality ranking.</div></div><div class="obadge bml">ML</div></div>
+    <div class="obj-row"><div class="oi">03</div><div class="ob"><div class="oh">Verify Successful Pick After Grasp Execution</div><div class="od">After lifting, the system confirmed whether the object was actually in the gripper using visual feedback on hardware, and contact-point detection in simulation. Failed picks were rejected.</div></div><div class="obadge bcv">CV</div></div>
+    <div class="obj-row"><div class="oi">04</div><div class="ob"><div class="oh">Perform Color-Based Object Sorting</div><div class="od">Each verified pick was classified as RED, GREEN, or BLUE and routed to the correct drop zone. Non-target color objects were skipped entirely.</div></div><div class="obadge bau">AUTO</div></div>
+    <div class="obj-row"><div class="oi">05</div><div class="ob"><div class="oh">Validate on a 4-DOF Robotic Arm</div><div class="od">The pipeline was validated fully in PyBullet simulation. Hardware integration was carried out partially — full end-to-end hardware operation remains in progress.</div></div><div class="obadge brb">ROBOT</div></div>
+  </div>
+</section>
+
+<!-- ===================== HARDWARE DIVIDER ===================== -->
+<div class="divider-banner hw">
+  <div class="db-icon hw">🔧</div>
+  <div class="db-content">
+    <div class="db-label hw">Part 1 — Hardware Design</div>
+    <div class="db-title">PROPOSED HARDWARE SYSTEM</div>
+    <div class="db-desc">What was designed and intended for the physical 4-DOF arm. All components were acquired and partially integrated.</div>
+  </div>
+  <span class="sp sp-wip" style="margin-left:auto;flex-shrink:0;">⚠️ Not Fully Working</span>
+</div>
+
+<!-- HARDWARE WORKFLOW -->
+<section id="hardware">
+  <div class="section-badge sb-hw"><span class="sb-dot"></span>Hardware — Proposed Workflow</div>
+  <div class="s-eyebrow eye-hw">Proposed System Workflow</div>
+  <div class="s-title">WHAT WAS DESIGNED TO WORK</div>
+  <p class="s-lead">This was the intended full pipeline for the physical hardware. Each step was designed around the real 4-DOF arm, servo joints, Arduino controller, and RGB camera.</p>
+
+  <div class="hw-workflow rv">
+    <div class="hw-steps">
+      <div class="hw-step">
+        <div class="hw-dot">01</div>
+        <div class="hw-body">
+          <div class="hw-step-title">Capture Visual Input from Workspace</div>
+          <div class="hw-step-desc">An RGB camera mounted over the workspace was intended to capture the table surface live. The frame was the entry point for the entire pipeline — used for grasp scoring, pick verification imaging, and color classification.</div>
+          <div class="hw-pills"><span class="hpill">RGB Camera</span><span class="hpill">OpenCV Capture</span><span class="hpill">30 FPS</span></div>
+        </div>
+      </div>
+      <div class="hw-step">
+        <div class="hw-dot">02</div>
+        <div class="hw-body">
+          <div class="hw-step-title">Preprocess Image + Identify Grasp Candidates</div>
+          <div class="hw-step-desc">The raw frame was to be resized and normalized. Candidate grasp regions were to be identified within the workspace — the bounding boxes that would be individually scored by the deep learning model.</div>
+          <div class="hw-pills"><span class="hpill">Resize + Normalize</span><span class="hpill">Region Proposal</span></div>
+        </div>
+      </div>
+      <div class="hw-step">
+        <div class="hw-dot">03</div>
+        <div class="hw-body">
+          <div class="hw-step-title">Predict Grasp Quality — Select Best Pose</div>
+          <div class="hw-step-desc">A trained deep learning model (TensorFlow / PyTorch) was to score each candidate region. The region with the highest predicted quality was to be selected as the target grasp pose — replacing heuristic selection with a learned ranking.</div>
+          <div class="hw-pills"><span class="hpill">TensorFlow / PyTorch</span><span class="hpill">Quality Score</span><span class="hpill">Best Pose Selection</span></div>
+        </div>
+      </div>
+      <div class="hw-step">
+        <div class="hw-dot">04</div>
+        <div class="hw-body">
+          <div class="hw-step-title">Execute Grasp — Servo-Driven Arm Motion</div>
+          <div class="hw-step-desc">Joint angle commands were to be sent over USB serial to the Arduino. The Arduino was to generate PWM signals for all 4 servo motors — moving the arm to the target position, aligning the gripper, closing with controlled force, and lifting to a safe height.</div>
+          <div class="hw-pills"><span class="hpill">Arduino PWM</span><span class="hpill">4 Servo Joints</span><span class="hpill">USB Serial</span><span class="hpill">Controlled Force</span></div>
+        </div>
+      </div>
+      <div class="hw-step">
+        <div class="hw-dot">05</div>
+        <div class="hw-body">
+          <div class="hw-step-title">Pick Verification via Visual Feedback</div>
+          <div class="hw-step-desc">After lifting, a post-grasp image was to be captured. A visual check was to confirm whether the object was present in the gripper. Failed grasps were to be rejected and the arm reset — only verified picks were to proceed to sorting.</div>
+          <div class="hw-pills"><span class="hpill">Post-Grasp Image</span><span class="hpill">Presence Check</span><span class="hpill">Reject on Fail</span></div>
+        </div>
+      </div>
+      <div class="hw-step">
+        <div class="hw-dot">06</div>
+        <div class="hw-body">
+          <div class="hw-step-title">Color Classification + Sort to Drop Zone</div>
+          <div class="hw-step-desc">The object's dominant color was to be extracted using OpenCV and classified as RED, GREEN, or BLUE. The arm was to move to the corresponding drop zone and release. Non-target color objects were to be skipped without being picked.</div>
+          <div class="hw-pills"><span class="hpill">Color Extraction</span><span class="hpill">RED / GREEN / BLUE</span><span class="hpill">Drop Zone Release</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rv">
+      <div class="proc-detail">
+        <div class="proc-detail-hd"><div class="proc-detail-hd-title">Visual Grasp Quality Estimation</div></div>
+        <div class="proc-detail-body"><ul>
+          <li>RGB image of the workspace was to be captured</li>
+          <li>Image was to be resized and normalized</li>
+          <li>Candidate grasp regions were to be identified</li>
+          <li>Grasp quality score was to be predicted for each candidate</li>
+          <li>The grasp with the highest confidence was to be selected</li>
+        </ul></div>
+      </div>
+      <div class="proc-detail">
+        <div class="proc-detail-hd"><div class="proc-detail-hd-title">Grasp Execution</div></div>
+        <div class="proc-detail-body"><ul>
+          <li>The robotic arm was to move to the selected grasp position</li>
+          <li>Servo motors were to actuate each individual joint</li>
+          <li>The gripper was to align with the object orientation</li>
+          <li>The gripper was to close with controlled force</li>
+          <li>The object was to be lifted to a safe height</li>
+        </ul></div>
+      </div>
+      <div class="proc-detail">
+        <div class="proc-detail-hd"><div class="proc-detail-hd-title">Pick Verification</div></div>
+        <div class="proc-detail-body"><ul>
+          <li>A post-grasp image was to be captured after lifting</li>
+          <li>A visual check was to confirm object presence in gripper</li>
+          <li>Stability of the grasp was to be assessed</li>
+          <li>Failed grasps were to be rejected immediately</li>
+          <li>Only verified picks were to proceed to sorting</li>
+        </ul></div>
+      </div>
+      <div class="proc-detail" style="margin-bottom:0">
+        <div class="proc-detail-hd"><div class="proc-detail-hd-title">Color-Based Sorting</div></div>
+        <div class="proc-detail-body"><ul>
+          <li>Object color was to be analyzed after successful pick verification</li>
+          <li>Dominant color features were to be extracted</li>
+          <li>Object was to be classified into predefined color categories</li>
+          <li>The arm was to move to the corresponding placement location</li>
+          <li>Object was to be released into the designated area</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HARDWARE COMPONENTS -->
+<section id="hwcomponents" class="alt">
+  <div class="section-badge sb-hw"><span class="sb-dot"></span>Hardware — Components</div>
+  <div class="s-eyebrow eye-hw">Required Hardware</div>
+  <div class="s-title">ALL COMPONENTS ACQUIRED</div>
+  <p class="s-lead">All hardware components were acquired. Partial integration was completed — full end-to-end operation was not achieved.</p>
+  <div class="hw-comp-grid rv">
+    <div class="hw-comp"><div class="hcn">01</div><div class="hcname">4-DOF Robotic Arm Structure</div><div class="hcspec">4-joint arm with base rotation, shoulder, elbow, and wrist — 4 degrees of freedom designed to provide full tabletop pick-and-place workspace coverage.</div><div class="hc-badge">Acquired</div></div>
+    <div class="hw-comp"><div class="hcn">02</div><div class="hcname">Servo Motors</div><div class="hcspec">One servo per joint (4 arm DOF + 1 gripper = 5 total). Each was to receive a PWM signal from Arduino for independent real-time joint angle control.</div><div class="hc-badge">Acquired</div></div>
+    <div class="hw-comp"><div class="hcn">03</div><div class="hcname">Gripper Mechanism</div><div class="hcspec">Servo-driven parallel gripper designed to close with controlled force and secure objects. Post-lift visual check was to confirm successful pick before sorting.</div><div class="hc-badge">Acquired</div></div>
+    <div class="hw-comp"><div class="hcn">04</div><div class="hcname">RGB Camera</div><div class="hcspec">Primary sensor for the full pipeline — workspace capture for the grasp model, post-grasp pick verification imaging, and dominant color classification.</div><div class="hc-badge">Acquired</div></div>
+    <div class="hw-comp"><div class="hcn">05</div><div class="hcname">Arduino Controller</div><div class="hcspec">Designed to generate PWM signals for all servo motors, handle real-time joint control, and communicate with the Python pipeline over USB serial.</div><div class="hc-badge">Acquired</div></div>
+    <div class="hw-comp"><div class="hcn">06</div><div class="hcname">Power Supply + Wiring</div><div class="hcspec">Regulated power supply and connecting wires to provide stable voltage to servos and Arduino, with all 5 servos wired to Arduino PWM output pins.</div><div class="hc-badge">Acquired</div></div>
+  </div>
+  <div style="margin-top:3rem;">
+    <div class="s-eyebrow eye-hw" style="margin-bottom:1.5rem;">Software Stack</div>
+    <div class="sw-grid rv">
+      <div class="sw-card"><div class="sw-icon">PY</div><div class="sw-name">Python</div><div class="sw-desc">System integration, pipeline orchestration, serial communication with Arduino, OpenCV processing, and model inference.</div></div>
+      <div class="sw-card"><div class="sw-icon">CV</div><div class="sw-name">OpenCV</div><div class="sw-desc">Image capture, resize, normalize, candidate region extraction, post-grasp presence check, and color feature extraction.</div></div>
+      <div class="sw-card"><div class="sw-icon">TF</div><div class="sw-name">TensorFlow / PyTorch</div><div class="sw-desc">Grasp quality prediction model — trained on labeled data, scores candidate regions, outputs best grasp pose for execution.</div></div>
+      <div class="sw-card"><div class="sw-icon">AR</div><div class="sw-name">Arduino + PWM</div><div class="sw-desc">Receives joint commands via serial. Generates PWM for each servo. Handles real-time joint-level hardware control.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SIMULATION DIVIDER ===================== -->
+<div class="divider-banner sim">
+  <div class="db-icon sim">✅</div>
+  <div class="db-content">
+    <div class="db-label sim">Part 2 — Fully Implemented</div>
+    <div class="db-title">PYBULLET SIMULATION</div>
+    <div class="db-desc">The complete pipeline was implemented and validated in PyBullet using Franka Panda at 240 Hz. Pick verification, color sorting, and the full state machine all work correctly.</div>
+  </div>
+  <span class="sp sp-sim" style="margin-left:auto;flex-shrink:0;">✅ Fully Working</span>
+</div>
+
+<!-- SIMULATION -->
+<section id="simulation">
+  <div class="section-badge sb-sim"><span class="sb-dot"></span>Simulation — Implemented</div>
+  <div class="s-eyebrow eye-sim">Simulation Implementation</div>
+  <div class="s-title">WHAT WAS ACTUALLY BUILT</div>
+  <p class="s-lead">The entire pipeline was implemented in PyBullet simulation using the Franka Panda robot model. This validated all core logic — IK-based motion, contact-point pick verification, and color-based sorting across 30 randomly placed cubes.</p>
+
+  <div class="sim-layout rv">
+    <div class="terminal">
+      <div class="term-header">
+        <div class="tdr"></div><div class="tdy"></div><div class="tdg"></div>
+        <span class="term-title">simulation.py — Franka Panda · PyBullet · 240 Hz</span>
+      </div>
+      <div class="term-body">
+<span style="display:block"><span class="tc"># ===== CONFIG =====</span></span>
+<span style="display:block"><span class="tk">SIM_HZ</span>       = <span class="tn">240</span>   <span class="tc"># physics rate</span></span>
+<span style="display:block"><span class="tk">NUM_CUBES</span>    = <span class="tn">30</span>    <span class="tc"># random on table</span></span>
+<span style="display:block"><span class="tk">ARM_FORCE</span>    = <span class="tn">2000</span></span>
+<span style="display:block"><span class="tk">GRIP_FORCE</span>   = <span class="tn">600</span></span>
+<span style="display:block"><span class="tk">LIFT_HEIGHT</span>  = <span class="tn">0.9</span>   <span class="tc"># m</span></span>
+<span style="display:block"><span class="tk">APPROACH</span>     = <span class="tn">0.12</span></span>
+<span style="display:block"><span class="tk">GRASP_OFFSET</span> = <span class="tn">0.01</span></span>
+<span style="display:block">&nbsp;</span>
+<span style="display:block"><span class="tc"># Only RED, GREEN, BLUE sorted</span></span>
+<span style="display:block"><span class="tk">TARGET_COLORS</span> = [<span class="ts">"RED"</span>,<span class="ts">"GREEN"</span>,<span class="ts">"BLUE"</span>]</span>
+<span style="display:block">&nbsp;</span>
+<span style="display:block"><span class="tk">DROP_ZONES</span> = {</span>
+<span style="display:block">  <span class="ts">"RED"</span>:   [<span class="tn">0.40</span>, <span class="tn"> 0.60</span>, <span class="tn">0.63</span>],</span>
+<span style="display:block">  <span class="ts">"GREEN"</span>: [<span class="tn">1.00</span>, <span class="tn"> 0.60</span>, <span class="tn">0.63</span>],</span>
+<span style="display:block">  <span class="ts">"BLUE"</span>:  [<span class="tn">0.70</span>, <span class="tn">-0.60</span>, <span class="tn">0.63</span>]</span>
+<span style="display:block">}</span>
+<span style="display:block">&nbsp;</span>
+<span style="display:block"><span class="tc"># ===== MAIN LOOP =====</span></span>
+<span style="display:block"><span class="tk">for</span> cube <span class="tk">in</span> cubes:</span>
+<span style="display:block">  <span class="tk">if</span> cube[<span class="ts">"name"</span>] <span class="tk">not in</span> TARGET_COLORS:</span>
+<span style="display:block">    <span class="tk">continue</span> <span class="tc"># skip YELLOW/PURPLE/CYAN</span></span>
+<span style="display:block">&nbsp;</span>
+<span style="display:block">  agent.<span class="tf">open_gripper</span>()</span>
+<span style="display:block">  agent.<span class="tf">move_to</span>([x, y, LIFT_HEIGHT])</span>
+<span style="display:block">  agent.<span class="tf">move_to</span>([x, y, z+APPROACH])</span>
+<span style="display:block">  agent.<span class="tf">move_to</span>([x, y, z+GRASP_OFFSET])</span>
+<span style="display:block">  agent.<span class="tf">close_gripper</span>()</span>
+<span style="display:block">  pick_attempts += <span class="tn">1</span></span>
+<span style="display:block">&nbsp;</span>
+<span style="display:block">  <span class="tc"># ← PICK VERIFICATION</span></span>
+<span style="display:block">  <span class="tk">if not</span> agent.<span class="tf">verify_grasp</span>(cube_id):</span>
+<span style="display:block">    <span class="tk">continue</span> <span class="tc"># failed — skip sort</span></span>
+<span style="display:block">  grasp_success += <span class="tn">1</span></span>
+<span style="display:block">&nbsp;</span>
+<span style="display:block">  constraint = p.<span class="tf">createConstraint</span>(</span>
+<span style="display:block">    robot, <span class="tn">11</span>, cube_id, <span class="tn">-1</span>,</span>
+<span style="display:block">    p.JOINT_FIXED, ...)</span>
+<span style="display:block">  agent.<span class="tf">move_to</span>(drop)</span>
+<span style="display:block">  agent.<span class="tf">open_gripper</span>()</span>
+<span style="display:block">  p.<span class="tf">removeConstraint</span>(constraint)</span>
+<span style="display:block">  place_success += <span class="tn">1</span></span>
+<span style="display:block">&nbsp;</span>
+<span style="display:block"><span class="th">==============================</span></span>
+<span style="display:block"><span class="th">SIMULATION RESULTS</span></span>
+<span style="display:block"><span class="th">==============================</span></span>
+<span style="display:block"><span class="to">Total Cubes:         30</span></span>
+<span style="display:block"><span class="to">Target Cubes:        ~17  (R+G+B)</span></span>
+<span style="display:block"><span class="to">Grasp Success Rate:  94.1 %</span></span>
+<span style="display:block"><span class="to">Sorting Accuracy:    100.00 %</span></span>
+      </div>
+    </div>
+    <div class="sim-right">
+      <div class="sim-card"><div class="sbar sbar-p"></div>
+        <div class="sc-label">Environment</div>
+        <div class="sc-val" style="font-size:1.6rem;padding-top:.2rem">FRANKA PANDA</div>
+        <div class="sc-sub">PyBullet · 240 Hz physics · 7-DOF IK trajectory control</div>
+      </div>
+      <div class="sim-card"><div class="sbar sbar-c"></div>
+        <div class="sc-label">Grasp Success Rate (verified)</div>
+        <div class="sc-val">94<small>%</small></div>
+        <div class="sc-sub">Contact-point verified via <code style="font-family:Space Mono;font-size:.65rem;background:var(--sim-lt);color:var(--sim);padding:1px 5px;border-radius:2px">getContactPoints(robot,cube)</code></div>
+        <div class="sim-verified"><span class="vdot"></span>Pick Verification Active</div>
+      </div>
+      <div class="sim-card"><div class="sbar sbar-a"></div>
+        <div class="sc-label">Color Sorting Accuracy</div>
+        <div class="sc-val">100<small>%</small></div>
+        <div class="sc-sub">Every verified pick placed correctly in RED / GREEN / BLUE bin. Zero mis-sorts across all runs.</div>
+      </div>
+      <div class="sim-card"><div class="sbar sbar-g"></div>
+        <div class="sc-label">Non-target colors — correctly skipped</div>
+        <div class="sc-val" style="font-size:1.2rem;padding-top:.3rem">YELLOW · PURPLE · CYAN</div>
+        <div class="sc-sub">Not in TARGET_COLORS — arm skipped them with zero wasted motion</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATE MACHINE -->
+<section id="statemachine" class="alt">
+  <div class="section-badge sb-sim"><span class="sb-dot"></span>Simulation — State Machine</div>
+  <div class="s-eyebrow eye-sim">Task Controller</div>
+  <div class="s-title">6-STATE MACHINE</div>
+  <p class="s-lead">The sorting loop was controlled by a 6-state machine. Each cube went through the full sequence only if it was a target color and the pick was verified.</p>
+  <div class="sm-wrap rv">
+    <div class="sm-flow">
+      <div class="sm-node"><div class="sni">00</div><div class="snic">💤</div><div class="snn">IDLE</div></div>
+      <div class="sm-node"><div class="sni">01</div><div class="snic">🔍</div><div class="snn">SCAN</div></div>
+      <div class="sm-node active"><div class="sni">02</div><div class="snic">🎯</div><div class="snn">APPROACH</div></div>
+      <div class="sm-node"><div class="sni">03</div><div class="snic">✊</div><div class="snn">GRASP + VERIFY</div></div>
+      <div class="sm-node"><div class="sni">04</div><div class="snic">🚚</div><div class="snn">MOVE TO BIN</div></div>
+      <div class="sm-node"><div class="sni">05</div><div class="snic">📦</div><div class="snn">RELEASE</div></div>
+    </div>
+  </div>
+  <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap;">
+    <div style="border:1px solid rgba(21,128,61,.25);background:var(--green-lt);border-radius:4px;padding:.9rem 1.3rem;font-size:.82rem;color:var(--green);flex:1;min-width:240px;"><strong>✓ Target color + verified pick</strong><br>APPROACH → GRASP → MOVE TO BIN → RELEASE</div>
+    <div style="border:1px solid rgba(185,28,28,.25);background:var(--red-lt);border-radius:4px;padding:.9rem 1.3rem;font-size:.82rem;color:var(--red);flex:1;min-width:240px;"><strong>✗ verify_grasp() fails</strong><br>GRASP state → continue → back to SCAN (no drop-zone trip)</div>
+    <div style="border:1px solid rgba(180,83,9,.25);background:var(--amber-lt);border-radius:4px;padding:.9rem 1.3rem;font-size:.82rem;color:var(--amber);flex:1;min-width:240px;"><strong>⊘ Non-target color</strong><br>Not in TARGET_COLORS → continue → SCAN immediately</div>
+  </div>
+</section>
+
+<!-- PICK VERIFICATION -->
+<section id="verification">
+  <div class="section-badge sb-sim"><span class="sb-dot"></span>Simulation — Core Feature</div>
+  <div class="s-eyebrow eye-sim">Pick Verification</div>
+  <div class="s-title">CONTACT POINT VERIFICATION</div>
+  <p class="s-lead">Pick verification was the key feature that prevented empty-gripper sort trips. In simulation, PyBullet's physics contact query served as the ground truth check.</p>
+  <div class="pv-grid rv">
+    <div class="pv-steps">
+      <div class="pv-step"><div class="pvn">01</div><div><div class="pvt">Close Gripper + Lift</div><div class="pvd">Gripper closed with GRIP_FORCE = 600. Arm lifted to LIFT_HEIGHT = 0.9 m before verification ran. Gravity had fully acted on the grasp at this height.</div></div></div>
+      <div class="pv-step"><div class="pvn">02</div><div><div class="pvt">Contact Point Query</div><div class="pvd"><code>p.getContactPoints(robot, cube)</code> queried PyBullet's physics engine for active contacts between any robot link and the cube body. Returns a list of contact structures.</div></div></div>
+      <div class="pv-step"><div class="pvn">03</div><div><div class="pvt">Evaluate Contact Count</div><div class="pvd">If <code>len(contacts) > 0</code> — pick was verified. The gripper was holding the cube and sorting proceeded. If 0 contacts — the pick had failed.</div></div></div>
+      <div class="pv-step"><div class="pvn">04</div><div><div class="pvt">Reject Failed Pick</div><div class="pvd">On failure, <code>continue</code> skipped MOVE_TO_BIN and RELEASE entirely. The arm made no wasted trip to the drop zone. The next cube was processed immediately.</div></div></div>
+      <div class="pv-step"><div class="pvn">05</div><div><div class="pvt">Attach Constraint + Sort</div><div class="pvd">On success, a JOINT_FIXED constraint was created between robot link 11 (EE) and the cube — guaranteeing the cube stayed in the gripper during transport. Removed after drop.</div></div></div>
+    </div>
+    <div class="rv">
+      <div class="pv-code-box">
+        <div class="pv-code-hd">verify_grasp() — simulation.py</div>
+        <div class="pv-code">
+<span style="display:block"><span class="tc">def</span> <span class="tf">verify_grasp</span>(self, cube):</span>
+<span style="display:block">  contacts = p.<span class="tf">getContactPoints</span>(</span>
+<span style="display:block">    self.robot, cube</span>
+<span style="display:block">  )</span>
+<span style="display:block">  <span class="tk">return</span> len(contacts) > <span class="tn">0</span></span>
+<span style="display:block">&nbsp;</span>
+<span style="display:block"><span class="tc"># In sorting loop:</span></span>
+<span style="display:block">agent.<span class="tf">close_gripper</span>()</span>
+<span style="display:block">pick_attempts += <span class="tn">1</span></span>
+<span style="display:block">&nbsp;</span>
+<span style="display:block"><span class="tk">if not</span> agent.<span class="tf">verify_grasp</span>(cube_id):</span>
+<span style="display:block">  <span class="tk">continue</span>  <span class="tc"># reject</span></span>
+<span style="display:block">&nbsp;</span>
+<span style="display:block">grasp_success += <span class="tn">1</span></span>
+<span style="display:block">&nbsp;</span>
+<span style="display:block">constraint = p.<span class="tf">createConstraint</span>(</span>
+<span style="display:block">  robot, <span class="tn">11</span>, cube_id, <span class="tn">-1</span>,</span>
+<span style="display:block">  p.JOINT_FIXED,</span>
+<span style="display:block">  [<span class="tn">0</span>,<span class="tn">0</span>,<span class="tn">0</span>],[<span class="tn">0</span>,<span class="tn">0</span>,<span class="tn">0</span>],[<span class="tn">0</span>,<span class="tn">0</span>,<span class="tn">0</span>]</span>
+<span style="display:block">)</span>
+        </div>
+      </div>
+      <div style="margin-top:1.2rem;padding:1.2rem 1.4rem;background:var(--sim-lt);border:1px solid rgba(14,116,144,.2);border-radius:4px;">
+        <div style="font-weight:600;font-size:.85rem;color:var(--sim);margin-bottom:.4rem;">Hardware Equivalent</div>
+        <div style="font-size:.8rem;color:#0e5070;line-height:1.7;">On the physical arm, <code style="background:rgba(14,116,144,.15);padding:1px 5px;border-radius:2px">verify_grasp()</code> was designed to be a camera-based visual presence check — a post-lift image was to be captured and analyzed to confirm the object in the gripper before the arm moved to the drop zone. Same logic, different sensor.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COLOR SORTING -->
+<section id="colorsort" class="alt">
+  <div class="section-badge sb-sim"><span class="sb-dot"></span>Simulation — Color Sorting</div>
+  <div class="s-eyebrow eye-sim">Color-Based Sorting</div>
+  <div class="s-title">THREE BINS, ZERO MISTAKES</div>
+  <p class="s-lead">30 cubes were spawned randomly across the table in 6 colors. Only RED, GREEN, and BLUE were picked and sorted. Each had a fixed drop zone coordinate. 100% sorting accuracy was achieved on all verified picks.</p>
+  <div class="cs-cols rv">
+    <div class="cs-card red"><div class="cs-dot"></div><div class="cs-name">RED</div><div class="cs-coord">[ 0.40, +0.60, 0.63 ]</div><div class="cs-desc">Near-left drop zone. Arm approached from LIFT_HEIGHT, lowered to z = 0.65, opened gripper, constraint removed after release.</div></div>
+    <div class="cs-card green"><div class="cs-dot"></div><div class="cs-name">GREEN</div><div class="cs-coord">[ 1.00, +0.60, 0.63 ]</div><div class="cs-desc">Far-left zone — maximum x-reach. Tested the full extension limit of the IK solver at the workspace boundary.</div></div>
+    <div class="cs-card blue"><div class="cs-dot"></div><div class="cs-name">BLUE</div><div class="cs-coord">[ 0.70, -0.60, 0.63 ]</div><div class="cs-desc">Opposite side — negative Y. The arm swung across the full workspace width, testing joint limit handling during cross-table motion.</div></div>
+  </div>
+  <div class="skip-box rv">
+    <div class="skip-label">Non-Target Colors — Skipped (not in TARGET_COLORS)</div>
+    <div><span style="color:#eab308">■ YELLOW</span> &nbsp;→ <span style="color:var(--muted)">not in TARGET_COLORS → continue (no pick, no wasted motion)</span></div>
+    <div><span style="color:#a855f7">■ PURPLE</span> &nbsp;→ <span style="color:var(--muted)">not in TARGET_COLORS → continue</span></div>
+    <div><span style="color:#0891b2">■ CYAN</span> &nbsp;&nbsp;&nbsp;→ <span style="color:var(--muted)">not in TARGET_COLORS → continue</span></div>
+  </div>
+</section>
+
+<!-- METRICS -->
+<section id="metrics">
+  <div class="section-badge sb-sim"><span class="sb-dot"></span>Simulation — Results</div>
+  <div class="s-eyebrow eye-sim">Results</div>
+  <div class="s-title">THE NUMBERS</div>
+  <div class="metrics-grid rv">
+    <div class="met-card"><div class="met-val p">94<span style="font-size:2.2rem">%</span></div><div class="met-lbl">Grasp Success Rate</div><div class="met-desc">Contact-point verified grasps across 30-cube simulation runs. Tracked pick_attempts vs grasp_success per run.</div></div>
+    <div class="met-card"><div class="met-val c">100<span style="font-size:2.2rem">%</span></div><div class="met-lbl">Sorting Accuracy</div><div class="met-desc">Every verified pick placed in the correct color-coded drop zone. place_success equalled grasp_success across all runs.</div></div>
+    <div class="met-card"><div class="met-val a">30</div><div class="met-lbl">Cubes Per Run</div><div class="met-desc">30 randomly spawned cubes across 6 colors per simulation run. System consistency tested across multiple repeated runs.</div></div>
+    <div class="met-card"><div class="met-val g">240<span style="font-size:2.2rem">Hz</span></div><div class="met-lbl">Physics Rate</div><div class="met-desc">PyBullet ran at 240 Hz. IK solver called every step for smooth trajectory control via Franka Panda's 7 joints.</div></div>
+  </div>
+  <div style="margin-top:2rem;border:1px solid var(--border);border-radius:4px;padding:1.5rem 2rem;background:var(--off);">
+    <div style="font-family:'Space Mono',monospace;font-size:.56rem;text-transform:uppercase;letter-spacing:.15em;color:var(--muted2);margin-bottom:.8rem;">Planned Hardware Evaluation Metrics</div>
+    <div style="display:flex;gap:2rem;flex-wrap:wrap;">
+      <div style="font-size:.84rem;color:var(--muted);">📊 Grasp success rate across multiple trials</div>
+      <div style="font-size:.84rem;color:var(--muted);">📊 Pick verification accuracy</div>
+      <div style="font-size:.84rem;color:var(--muted);">📊 Color sorting accuracy</div>
+      <div style="font-size:.84rem;color:var(--muted);">📊 System consistency during repeated runs</div>
+    </div>
+  </div>
+</section>
+
+<!-- VIDEO DEMO -->
+<section id="video">
+  <div class="section-badge sb-sim"><span class="sb-dot"></span>Demo</div>
+  <div class="s-eyebrow eye-sim">Partial Implementation Demo</div>
+  <div class="s-title">VIDEO DEMONSTRATION</div>
+  <p class="s-lead">A partial demonstration of the hardware implementation. The simulation demo shows the complete pick-verify-sort pipeline running end-to-end.</p>
+
+  <div class="video-layout rv">
+    <!-- VIDEO FRAME — replace the src inside the iframe or video tag with your actual link -->
+    <div class="video-frame" id="videoFrame">
+      <div class="vf-placeholder" id="vfPlaceholder">
+        <div class="vf-icon">
+          <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+        </div>
+        <div class="vf-title">Demo Video</div>
+        <div class="vf-sub">Paste your YouTube link or video file URL below to embed it here.</div>
+        <div class="vf-badge">⚠️ Video not yet attached</div>
+      </div>
+      <!-- UNCOMMENT ONE OF THESE WHEN READY: -->
+      <!-- YouTube: <iframe src="https://www.youtube.com/embed/YOUR_VIDEO_ID" allowfullscreen></iframe> -->
+      <!-- Local/Drive video: <video src="YOUR_VIDEO_URL" controls></video> -->
+    </div>
+
+    <div class="video-info">
+      <div class="vi-card">
+        <div class="vi-label">Hardware Demo</div>
+        <div class="vi-title">Partial Hardware Implementation</div>
+        <div class="vi-desc">Shows the physical 4-DOF arm, servo joints, gripper mechanism, and Arduino controller that were assembled. Demonstrates the partial integration achieved before the review.</div>
+        <div class="vi-status">
+          <span class="vi-tag vt-partial">⚠️ Partial</span>
+          <span class="vi-tag vt-done">Arm Assembled</span>
+          <span class="vi-tag vt-done">Servos Working</span>
+          <span class="vi-tag vt-pending">Full Pipeline Pending</span>
+        </div>
+      </div>
+      <div class="vi-card">
+        <div class="vi-label">Simulation Demo</div>
+        <div class="vi-title">Full Pipeline in PyBullet</div>
+        <div class="vi-desc">Shows the Franka Panda robot sorting all 30 cubes — approaching, grasping, running pick verification, and placing RED/GREEN/BLUE cubes into their correct drop zones. YELLOW, PURPLE, CYAN are correctly skipped.</div>
+        <div class="vi-status">
+          <span class="vi-tag vt-done">✅ Fully Working</span>
+          <span class="vi-tag vt-done">94% Grasp Rate</span>
+          <span class="vi-tag vt-done">100% Sort Accuracy</span>
+        </div>
+      </div>
+
+      <!-- HOW TO EMBED -->
+      <div class="embed-instructions">
+        <div class="ei-hd">How to attach your video</div>
+        <div class="ei-body">
+          <strong>YouTube:</strong> Replace <code>YOUR_VIDEO_ID</code> in the iframe line above.<br>
+          <strong>Google Drive:</strong> Get shareable link → change <code>/view</code> to <code>/preview</code> → use in iframe.<br>
+          <strong>Direct file:</strong> Uncomment the <code>&lt;video&gt;</code> tag and paste the URL.<br><br>
+          Just uncomment the right line in the HTML — the frame is already set up.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TIMELINE -->
+<section id="timeline" class="alt">
+  <div class="s-eyebrow eye-gen">Project Timeline</div>
+  <div class="s-title">4-WEEK PLAN</div>
+  <div class="tl-grid rv">
+    <div class="tl-card"><div class="tl-w">W1</div><div class="tl-t">Literature Review + System Design</div><div class="tl-d">Studied grasp quality estimation methods. Finalized system architecture, data pipeline design, and hardware wiring. Set up the PyBullet simulation environment.</div><div class="tl-bar" style="background:var(--accent)"></div></div>
+    <div class="tl-card"><div class="tl-w">W2</div><div class="tl-t">Model Selection + Training</div><div class="tl-d">Selected the deep learning grasp quality model using TensorFlow / PyTorch. Validated inference accuracy on workspace images from the RGB camera.</div><div class="tl-bar" style="background:var(--sim)"></div></div>
+    <div class="tl-card"><div class="tl-w">W3</div><div class="tl-t">Pick Verification + Integration</div><div class="tl-d">Implemented pick verification in simulation via contact-point detection. Began hardware integration of Arduino, servos, and camera. Integration challenges encountered.</div><div class="tl-bar" style="background:var(--amber)"></div></div>
+    <div class="tl-card"><div class="tl-w">W4</div><div class="tl-t">Simulation + Evaluation</div><div class="tl-d">Completed full pipeline in PyBullet simulation. Ran evaluation — 94% grasp success rate, 100% sorting accuracy across 30 randomized cubes. Hardware integration ongoing.</div><div class="tl-bar" style="background:var(--green)"></div></div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section id="team">
+  <div class="s-eyebrow eye-gen" style="justify-content:center">Contributors</div>
+  <div class="s-title">TEAM 11</div>
+  <div class="team-grid rv">
+    <div class="tc-card" data-n="01"><div class="tc-av">HM</div><div class="tc-name">Harish Manukonda</div><div class="tc-id">CB.SC.U4AIE24115</div></div>
+    <div class="tc-card" data-n="02"><div class="tc-av">NT</div><div class="tc-name">Neeraj T</div><div class="tc-id">CB.SC.U4AIE24141</div></div>
+    <div class="tc-card" data-n="03"><div class="tc-av">PK</div><div class="tc-name">Puneeth Kumar</div><div class="tc-id">CB.SC.U4AIE24146</div></div>
+    <div class="tc-card" data-n="04"><div class="tc-av">SS</div><div class="tc-name">Siddarth Sankar</div><div class="tc-id">CB.SC.U4AIE24151</div></div>
+  </div>
+  <div class="course-box"><div class="course-txt">Team 11 — Amrita School of Artificial Intelligence — Course <span>22AIE214</span>: Artificial Intelligence in Robotics</div></div>
+</section>
+
+<footer>
+  <div class="f-logo">4DOF<em>.</em>ARM</div>
+  <ul class="f-links">
+    <li><a href="#intro">Overview</a></li>
+    <li><a href="#hardware">Hardware</a></li>
+    <li><a href="#simulation">Simulation</a></li>
+    <li><a href="#video">Demo</a></li>
+    <li><a href="#team">Team</a></li>
+  </ul>
+  <div class="f-copy">Team 11 · Amrita School of AI · 22AIE214</div>
+</footer>
+
+<script>
+  const cur=document.getElementById('cur'),curR=document.getElementById('cur-r');
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+  (function loop(){rx+=(mx-rx)*.1;ry+=(my-ry)*.1;cur.style.left=mx+'px';cur.style.top=my+'px';curR.style.left=rx+'px';curR.style.top=ry+'px';requestAnimationFrame(loop);})();
+  document.querySelectorAll('a,button,.sm-node,.hw-comp,.prob-card,.obj-row,.pv-step,.scope-card').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{cur.style.width='16px';cur.style.height='16px';});
+    el.addEventListener('mouseleave',()=>{cur.style.width='10px';cur.style.height='10px';});
+  });
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach((e,i)=>{if(e.isIntersecting){setTimeout(()=>e.target.classList.add('on'),i*65);obs.unobserve(e.target);}});
+  },{threshold:.08});
+  document.querySelectorAll('.rv').forEach(el=>obs.observe(el));
+  const secs=document.querySelectorAll('section[id]'),links=document.querySelectorAll('.nav-links a');
+  window.addEventListener('scroll',()=>{
+    let c='';secs.forEach(s=>{if(window.scrollY>=s.offsetTop-80)c=s.id;});
+    links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+c));
+  });
+</script>
+</body>
+</html>
